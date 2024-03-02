@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Http\Controllers;
+use App\Models\Products;
+use App\Models\Variants;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Http\Controllers\MailController;
+class ProductsController extends Controller
+{
+    //To notify Admins when the product Goes Out of stock
+     public function getProductsOutOfStock(){
+        $Products=Products::join('variants','products.Id','=','variants.P_Id')->where('In_Stock','=','0')->get();
+        
+        if($Products){
+        $Mail=new MailController();
+        $Mail->ProductOutOfStock($Products);
+        return response()->json($Products);
+    }
+
+    else
+    {
+        return response()->json(['message'=>'all products in stock']);
+    }
+     }
+
+     //handles the API requests associated with representing products products 
+    public function getProducts(Request $request){
+
+        $query=Products::query();
+            
+        //handles average filter representation of product of certain average rating
+        if ($request->has('filter.average_rating')) {
+            $averageRating = $request->input('filter.average_rating');
+            $query->where('Average_Rating', $averageRating);
+        }
+
+         //handles options filter representation of product of certain option
+        if ($request->has('filter.options')) {
+            $options = $request->input('filter.options');
+            $Products=$query->where('options','like','%'.$options.'%')->get();
+        }
+        //handles maximum price filter representation of product of certain price
+        if ($request->has('filter.max_price')) {
+            $price = $request->input('filter.max_price');
+            $Products=$query->join('variants','products.Id','=','variants.P_Id')->where('price','=',$price);
+        }
+
+        $Products=$query->get();
+        if($Products){
+        return response()->json($Products,200);
+    }
+        else{
+            response()->json(['error'=>'no data to show'],500);
+        }
+
+    }
+ 
+   
+}
